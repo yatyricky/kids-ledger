@@ -14,7 +14,8 @@
 server/        Fastify 后端（auth / ledgers / entries / categories 路由）
 shared/        前后端共享的色系家族与 badge 预设（palettes.js）
 src/           Vue 3 前端
-nginx/         nginx 站点配置
+nginx/         nginx 站点配置（全量反代）
+deploy/        部署模板：SPA nginx 配置 + systemd 服务（{{占位符}} 替换后使用）
 data/          SQLite 数据库（运行时生成，注意备份）
 config.json    口令配置（不入库，gitignore）
 ```
@@ -43,7 +44,7 @@ chmod +x start.sh
 ./start.sh
 ```
 
-生产环境建议用 systemd 托管（`exec` 前台运行，天然兼容）：
+生产环境建议用 systemd 托管（`exec` 前台运行，天然兼容）。可直接使用模板 `deploy/kids-ledger.service.template`，替换 `{{INSTALL_DIR}}`、`{{RUN_USER}}`、`{{BACKEND_PORT}}` 后安装；或用下面的最小示例：
 
 ```ini
 # /etc/systemd/system/kids-ledger.service
@@ -74,6 +75,8 @@ nginx -t && nginx -s reload
 ```
 
 HTTPS：`sudo certbot --nginx -d kl.nefandfriends.com`（配置文件里也有手动模板）。
+
+nginx 直接托管 SPA 静态文件（性能更好，仅 `/api` 反代后端）的模板见 `deploy/nginx-spa.conf.template`：替换 `{{SERVER_NAME}}`、`{{SSL_CERTIFICATE}}`、`{{SSL_CERTIFICATE_KEY}}`、`{{SPA_ROOT}}`、`{{BACKEND_HOST}}`、`{{BACKEND_PORT}}`、`{{LOG_PREFIX}}` 后按同样方式启用。
 
 ## 口令与角色
 

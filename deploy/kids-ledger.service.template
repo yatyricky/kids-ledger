@@ -1,0 +1,32 @@
+# 家庭账本 · systemd 服务模板
+#
+# 占位符（部署前全部替换为实际值）：
+#   {{INSTALL_DIR}}   项目部署目录，例如 /opt/kids-ledger
+#   {{RUN_USER}}      运行用户，例如 www-data（需可读写部署目录，data/ 下写 SQLite）
+#   {{BACKEND_PORT}}  后端监听端口，默认 3050；必须与 nginx 模板的 {{BACKEND_PORT}} 一致
+#
+# 部署：替换占位符后放到 /etc/systemd/system/kids-ledger.service，然后
+#       sudo systemctl daemon-reload
+#       sudo systemctl enable --now kids-ledger
+#
+# 注意：
+# - start.sh 需要可执行权限（chmod +x start.sh）
+# - 若 node 通过 nvm 安装（不在 systemd 默认 PATH 中），在 [Service] 追加一行，例如：
+#       Environment=PATH=/home/deploy/.nvm/versions/node/v22.20.0/bin:/usr/local/bin:/usr/bin:/bin
+
+[Unit]
+Description=kids-ledger 家庭账本（Fastify + Vue SPA）
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory={{INSTALL_DIR}}
+ExecStart=/bin/bash {{INSTALL_DIR}}/start.sh
+Environment=NODE_ENV=production
+Environment=PORT={{BACKEND_PORT}}
+User={{RUN_USER}}
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

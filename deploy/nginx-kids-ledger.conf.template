@@ -1,0 +1,72 @@
+# 家庭账本 · 客户端 SPA nginx 配置模板（nginx 直接托管静态文件，/api 反代后端）
+#
+# 占位符（部署前全部替换为实际值）：
+#   {{SERVER_NAME}}          站点域名，例如 kl.nefandfriends.com
+#   {{SSL_CERTIFICATE}}      证书全链路径，例如 /etc/letsencrypt/live/kl.nefandfriends.com/fullchain.pem
+#   {{SSL_CERTIFICATE_KEY}}  证书私钥路径，例如 /etc/letsencrypt/live/kl.nefandfriends.com/privkey.pem
+#   {{SPA_ROOT}}             前端构建产物目录（dist/），例如 /opt/kids-ledger/dist
+#   {{BACKEND_HOST}}         后端地址，本机部署为 127.0.0.1
+#   {{BACKEND_PORT}}         后端端口（server/index.js 默认 3050，需与 service 模板一致）
+#   {{LOG_PREFIX}}           日志文件名前缀，例如 kl
+#
+# 部署：替换占位符后放到 /etc/nginx/sites-available/kl.conf（或 conf.d/），
+#       ln -s 到 sites-enabled/，然后 nginx -t && nginx -s reload
+# 证书未就绪时可临时只跑 HTTP：注释掉整个 443 server 块，
+# 并把 80 块末尾的 return 换成 443 块内的 location 部分（去掉 ssl 相关行）。
+
+# HTTP → HTTPS
+server {
+    listen 80;
+    server_name {{SERVER_NAME}};
+
+    access_log /var/log/nginx/{{LOG_PREFIX}}.access.log;
+    error_log  /var/log/nginx/{{LOG_PREFIX}}.error.log;
+
+    return 301 https://$host$request_uri;
+}
+
+# HTTPS
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name {{SERVER_NAME}};
+
+    ssl_certificate     {{SSL_CERTIFICATE}};
+    ssl_certificate_key {{SSL_CERTIFICATE_KEY}};
+    ssl_protocols       TLSv1.2 TLSv1.3;
+
+    client_max_body_size 1m;
+
+    access_log /var/log/nginx/{{LOG_PREFIX}}.access.log;
+    error_log  /var/log/nginx/{{LOG_PREFIX}}.error.log;
+
+    root  {{SPA_ROOT}};
+    index index.html;
+
+    # Vite 带内容哈希的静态资源：长缓存
+    location /assets/ {
+        add_header Cache-Control "public, max-age=2592000, immutable";
+    }
+
+    # 入口页不缓存，保证发新版立即生效
+    location = /index.html {
+        add_header Cache-Control "no-cache";
+    }
+
+    # SPA 前端路由回退
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # API 反代到 Fastify 后端（proxy_pass 不带 URI，保留 /api 前缀）
+    location /api/ {
+        proxy_pass http://{{BACKEND_HOST}}:{{BACKEND_PORT}};
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
