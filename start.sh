@@ -16,13 +16,24 @@ if [ ! -f config.json ]; then
 fi
 
 if [ ! -d node_modules ]; then
+  if ! command -v pnpm >/dev/null 2>&1; then
+    echo "[kids-ledger] 未找到 pnpm：请先安装（corepack enable pnpm 或 npm i -g pnpm），"
+    echo "[kids-ledger] 或直接运行 pnpm install --prod 后再启动"
+    exit 1
+  fi
   echo "[kids-ledger] 安装依赖..."
-  npm install
+  pnpm install --prod --no-frozen-lockfile
 fi
 
 if [ ! -d dist ]; then
-  echo "[kids-ledger] 未找到 dist/，构建前端..."
-  npm run build
+  if pnpm exec vite --version >/dev/null 2>&1; then
+    echo "[kids-ledger] 未找到 dist/，构建前端..."
+    pnpm build
+  else
+    echo "[kids-ledger] 未找到 dist/ 且未安装前端工具链（生产依赖安装）。"
+    echo "[kids-ledger] 请在本地 pnpm build 后上传 dist/（或使用 deploy.ps1 一键部署）"
+    exit 1
+  fi
 fi
 
 exec node server/index.js

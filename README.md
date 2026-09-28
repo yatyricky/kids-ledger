@@ -23,23 +23,38 @@ config.json    口令配置（不入库，gitignore）
 ## 本地开发
 
 ```bash
-npm install
+pnpm install
 cp config.example.json config.json   # 修改口令
-npm run build                        # 构建前端到 dist/
-npm start                            # http://127.0.0.1:3050
+pnpm build                           # 构建前端到 dist/
+pnpm start                           # http://127.0.0.1:3050
 ```
 
-前端热更新开发：`npm start` 起后端，另开终端 `npm run dev`（Vite 5173 端口，`/api` 自动代理到 3050）。
+前端热更新开发：`pnpm start` 起后端，另开终端 `pnpm dev`（Vite 5173 端口，`/api` 自动代理到 3050）。
 
 ## 服务器部署
 
+### 方式一：一键部署脚本（Windows PowerShell）
+
+```powershell
+.\deploy.ps1                      # 交互输入 SSH 别名（~/.ssh/config 里的 Host）
+.\deploy.ps1 -SshAlias myserver   # 或直接指定
+.\deploy.ps1 -SshAlias myserver -RemoteDir /srv/kids-ledger  # 远端目录默认 /opt/kids-ledger
+```
+
+脚本会：本地 vite 构建 → 打包 `dist + server + shared + nginx + package.json + pnpm-lock.yaml + config.example.json + start.sh` → scp 上传 → 远端解压、`pnpm install --prod` 装生产依赖、缺失时从 example 生成 config.json、复制 nginx 配置并 `nginx -t` 校验。
+
+脚本**不会**执行的操作（手动完成）：编辑服务器上的 `config.json` 改口令、`sudo nginx -s reload`、安装/启动 systemd 服务（unit 模板见下）。
+
+### 方式二：手动部署
+
 ```bash
-# 1. 安装 Node.js >= 22.5（例如通过 nodesource 或 nvm）
+# 1. 安装 Node.js >= 22.5（例如通过 nodesource 或 nvm），并准备 pnpm（corepack enable pnpm 或 npm i -g pnpm）
 # 2. 上传代码到服务器，例如 /opt/kids-ledger
 cd /opt/kids-ledger
 cp config.example.json config.json   # 编辑 tokens，设好自己的口令
+pnpm install --prod                  # 生产依赖（服务器不需要前端构建工具链）
 
-# 3. 启动（首次会自动 npm install + 构建前端）
+# 3. 启动（dist/ 需本地构建后一起上传，或保留 devDependencies 在服务器上 pnpm build）
 chmod +x start.sh
 ./start.sh
 ```

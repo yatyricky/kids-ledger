@@ -4,6 +4,7 @@
   "private": true,
   "description": "家庭简易账本系统",
   "type": "module",
+  "packageManager": "pnpm@11.8.0",
   "engines": {
     "node": ">=22.5.0"
   },
