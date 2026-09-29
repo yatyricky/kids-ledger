@@ -5,14 +5,19 @@
 #   {{RUN_USER}}      运行用户，例如 www-data（需可读写部署目录，data/ 下写 SQLite）
 #   {{BACKEND_PORT}}  后端监听端口，默认 3050；必须与 nginx 模板的 {{BACKEND_PORT}} 一致
 #
+# 前置条件：部署目录下 config.json 必须已存在（deploy.ps1 会自动从 example 生成；
+#           手动部署需自己 cp config.example.json config.json 并修改口令），缺失时
+#           服务启动即报错退出。data/ 目录由服务自动创建，无需手动建。
+#
 # 部署：替换占位符后放到 /etc/systemd/system/kids-ledger.service，然后
 #       sudo systemctl daemon-reload
 #       sudo systemctl enable --now kids-ledger
 #
 # 注意：
-# - start.sh 需要可执行权限（chmod +x start.sh）
-# - 若 node 通过 nvm 安装（不在 systemd 默认 PATH 中），在 [Service] 追加一行，例如：
+# - ExecStart 用 /usr/bin/env node 按 PATH 解析 node；若 node 通过 nvm 安装
+#   （不在 systemd 默认 PATH 中），在 [Service] 追加一行，例如：
 #       Environment=PATH=/home/deploy/.nvm/versions/node/v22.20.0/bin:/usr/local/bin:/usr/bin:/bin
+#   或直接把 ExecStart 改成 node 的绝对路径。
 
 [Unit]
 Description=kids-ledger 家庭账本（Fastify + Vue SPA）
@@ -21,7 +26,9 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory={{INSTALL_DIR}}
-ExecStart=/bin/bash {{INSTALL_DIR}}/start.sh
+# node 在 nvm 下，不在 systemd 默认 PATH，必须显式注入（node 大版本升级后需同步改此行）
+Environment=PATH={{HOME_PATH}}/.nvm/versions/node/v24.21.0/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/bin/env node server/index.js
 Environment=NODE_ENV=production
 Environment=PORT={{BACKEND_PORT}}
 User={{RUN_USER}}
