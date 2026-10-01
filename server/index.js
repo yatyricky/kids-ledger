@@ -14,6 +14,16 @@ const distDir = path.join(__dirname, '..', 'dist');
 
 const app = Fastify({ logger: true });
 
+// 4xx 透传业务文案；5xx 只记日志，不向客户端泄漏内部错误信息
+app.setErrorHandler((err, request, reply) => {
+  const code = err.statusCode ?? 500;
+  if (code < 500) {
+    return reply.code(code).send({ error: err.message });
+  }
+  request.log.error(err);
+  return reply.code(500).send({ error: '服务器内部错误' });
+});
+
 app.decorate('authenticate', authenticate);
 app.decorate('requireParent', requireParent);
 

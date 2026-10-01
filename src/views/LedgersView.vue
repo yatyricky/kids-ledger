@@ -6,6 +6,7 @@ import { getFamily } from '../../shared/palettes.js';
 import { fmtBalance } from '../format.js';
 import ColorPicker from '../components/ColorPicker.vue';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
+import LoadingSpinner from '../components/LoadingSpinner.vue';
 
 const router = useRouter();
 const ledgers = ref([]);
@@ -122,6 +123,7 @@ function logout() {
       </div>
     </header>
 
+    <LoadingSpinner :active="loading" />
     <p v-if="loadError" class="load-error">{{ loadError }}</p>
     <p v-if="!loading && ledgers.length === 0 && !loadError" class="empty">
       {{ isParent() ? '还没有账簿，点击右上角"添加账簿"创建第一本吧' : '暂无账簿，请让家长添加' }}

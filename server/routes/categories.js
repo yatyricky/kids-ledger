@@ -1,5 +1,8 @@
 import { db } from '../db.js';
 import { BADGE_IDS, DEFAULT_BADGE } from '../../shared/palettes.js';
+import { pathId } from '../validate.js';
+
+const NAME_MAX = 12; // 与前端输入框 maxlength 对齐
 
 function isUniqueViolation(err) {
   const s = `${err?.code ?? ''} ${err?.message ?? ''}`;
@@ -18,6 +21,9 @@ export default async function (app) {
       const { name, color } = request.body ?? {};
       if (typeof name !== 'string' || !name.trim()) {
         return reply.code(400).send({ error: '请填写核算名称' });
+      }
+      if (name.trim().length > NAME_MAX) {
+        return reply.code(400).send({ error: `核算名称不能超过 ${NAME_MAX} 字` });
       }
       if (color !== undefined && !BADGE_IDS.includes(color)) {
         return reply.code(400).send({ error: '无效的 badge 主题' });
@@ -40,11 +46,16 @@ export default async function (app) {
     '/categories/:id',
     { preHandler: [app.authenticate, app.requireParent] },
     async (request, reply) => {
-      const existing = db.prepare('SELECT id FROM categories WHERE id = ?').get(request.params.id);
+      const id = pathId(request);
+      if (id === null) return reply.code(404).send({ error: '核算不存在' });
+      const existing = db.prepare('SELECT id FROM categories WHERE id = ?').get(id);
       if (!existing) return reply.code(404).send({ error: '核算不存在' });
       const { name, color } = request.body ?? {};
       if (name !== undefined && (typeof name !== 'string' || !name.trim())) {
         return reply.code(400).send({ error: '核算名称不能为空' });
+      }
+      if (name !== undefined && name.trim().length > NAME_MAX) {
+        return reply.code(400).send({ error: `核算名称不能超过 ${NAME_MAX} 字` });
       }
       if (color !== undefined && !BADGE_IDS.includes(color)) {
         return reply.code(400).send({ error: '无效的 badge 主题' });
@@ -55,10 +66,10 @@ export default async function (app) {
         if (name !== undefined) { sets.push('name = ?'); params.push(name.trim()); }
         if (color !== undefined) { sets.push('color = ?'); params.push(color); }
         if (sets.length > 0) {
-          params.push(request.params.id);
+          params.push(id);
           db.prepare(`UPDATE categories SET ${sets.join(', ')} WHERE id = ?`).run(...params);
         }
-        return db.prepare('SELECT id, name, color FROM categories WHERE id = ?').get(request.params.id);
+        return db.prepare('SELECT id, name, color FROM categories WHERE id = ?').get(id);
       } catch (err) {
         if (isUniqueViolation(err)) {
           return reply.code(409).send({ error: '核算名称已存在（所有账簿共享一套核算）' });

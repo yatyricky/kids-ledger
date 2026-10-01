@@ -26,21 +26,7 @@ const categoryId = ref(props.entry ? props.entry.category?.id : null);
 const error = ref('');
 const saving = ref(false);
 
-// ── 金额：允许开头负号；只允许一个点；最多两位小数 ──
-function sanitizeAmount() {
-  const neg = amountStr.value.trim().startsWith('-');
-  let v = amountStr.value.replace(/[^\d.]/g, '');
-  const first = v.indexOf('.');
-  if (first !== -1) {
-    v = v.slice(0, first + 1) + v.slice(first + 1).replace(/\./g, '');
-  }
-  const dot = v.indexOf('.');
-  if (dot !== -1 && v.length - dot - 1 > 2) {
-    v = v.slice(0, dot + 3); // 不允许输入第三位小数
-  }
-  amountStr.value = (neg ? '-' : '') + v;
-}
-
+// ── 金额：输入不清洗，保存时统一校验 ──
 function toCents() {
   const m = /^(-?)(\d+)(?:\.(\d{1,2}))?$/.exec(amountStr.value.trim());
   if (!m) return null;
@@ -97,7 +83,7 @@ async function save() {
   }
   const cents = toCents();
   if (cents === null) {
-    error.value = '请填写正确的金额（正数或负数，最多两位小数）';
+    error.value = '请输入正确的金额：负号表示支出，最多两位小数';
     return;
   }
   if (cents === 0) {
@@ -191,13 +177,7 @@ async function save() {
 
       <div class="field">
         <label>金额（正数收入 / 负数支出）</label>
-        <input
-          v-model="amountStr"
-          class="amount-input"
-          inputmode="decimal"
-          placeholder="例如 -7.90"
-          @input="sanitizeAmount"
-        />
+        <input v-model="amountStr" class="amount-input" placeholder="例如 -7.90" />
       </div>
 
       <p v-if="error" class="form-error">{{ error }}</p>

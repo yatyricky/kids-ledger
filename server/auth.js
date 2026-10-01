@@ -1,7 +1,16 @@
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { config } from './config.js';
 
+// 先做 sha256 再比对：摘要定长，满足 timingSafeEqual 的等长要求，
+// 同时消除普通字符串 === 的时序侧信道
+function tokenEquals(expected, actual) {
+  const hExpected = createHash('sha256').update(expected).digest();
+  const hActual = createHash('sha256').update(actual).digest();
+  return timingSafeEqual(hExpected, hActual);
+}
+
 export function findUserByToken(token) {
-  return config.tokens.find((t) => t.token === token) ?? null;
+  return config.tokens.find((t) => tokenEquals(t.token, token)) ?? null;
 }
 
 // 从 Authorization: Bearer <token> 解析用户，挂到 request.user

@@ -1,4 +1,5 @@
 import { db } from '../db.js';
+import { MAX_AMOUNT_CENTS, pathId } from '../validate.js';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -24,6 +25,7 @@ function validateFields({ date, description, categoryId, amount }, { partial = f
   if (!partial || description !== undefined) {
     if (typeof description !== 'string' || !description.trim()) return { error: '请填写事情摘要' };
     out.description = description.trim();
+    if (out.description.length > 60) return { error: '事情摘要不能超过 60 字' };
   }
   if (!partial || categoryId !== undefined) {
     // 核算必选：不允许为空（PATCH 时也不允许清空为 null）
@@ -33,8 +35,10 @@ function validateFields({ date, description, categoryId, amount }, { partial = f
     out.categoryId = categoryId;
   }
   if (!partial || amount !== undefined) {
-    if (!Number.isInteger(amount)) return { error: '金额无效（最多两位小数）' };
+    // isSafeInteger：1e20 这类值能通过 isInteger，入库会破坏余额计算（见 validate.js）
+    if (!Number.isSafeInteger(amount)) return { error: '金额无效（正数收入 / 负数支出）' };
     if (amount === 0) return { error: '金额不能为 0' };
+    if (Math.abs(amount) > MAX_AMOUNT_CENTS) return { error: '金额超出范围（单笔不超过 100 万元）' };
     out.amount = amount;
   }
   return { out };
@@ -70,28 +74,34 @@ function listEntries(ledgerId) {
 
 export default async function (app) {
   app.get('/ledgers/:id/entries', { preHandler: [app.authenticate] }, async (request, reply) => {
-    const ledger = db.prepare('SELECT id FROM ledgers WHERE id = ?').get(request.params.id);
+    const ledgerId = pathId(request);
+    if (ledgerId === null) return reply.code(404).send({ error: '账簿不存在' });
+    const ledger = db.prepare('SELECT id FROM ledgers WHERE id = ?').get(ledgerId);
     if (!ledger) return reply.code(404).send({ error: '账簿不存在' });
-    return listEntries(request.params.id);
+    return listEntries(ledgerId);
   });
 
   app.post(
     '/ledgers/:id/entries',
     { preHandler: [app.authenticate, app.requireParent] },
     async (request, reply) => {
-      const ledger = db.prepare('SELECT id FROM ledgers WHERE id = ?').get(request.params.id);
+      const ledgerId = pathId(request);
+      if (ledgerId === null) return reply.code(404).send({ error: '账簿不存在' });
+      const ledger = db.prepare('SELECT id FROM ledgers WHERE id = ?').get(ledgerId);
       if (!ledger) return reply.code(404).send({ error: '账簿不存在' });
       const { error, out } = validateFields(entryFields(request.body));
       if (error) return reply.code(400).send({ error });
       const res = db
         .prepare('INSERT INTO entries (ledger_id, date, description, category_id, amount) VALUES (?, ?, ?, ?, ?)')
-        .run(request.params.id, out.date, out.description, out.categoryId, out.amount);
+        .run(ledgerId, out.date, out.description, out.categoryId, out.amount);
       return { id: res.lastInsertRowid };
     }
   );
 
   app.patch('/entries/:id', { preHandler: [app.authenticate, app.requireParent] }, async (request, reply) => {
-    const existing = db.prepare('SELECT id, ledger_id FROM entries WHERE id = ?').get(request.params.id);
+    const id = pathId(request);
+    if (id === null) return reply.code(404).send({ error: '记录不存在' });
+    const existing = db.prepare('SELECT id, ledger_id FROM entries WHERE id = ?').get(id);
     if (!existing) return reply.code(404).send({ error: '记录不存在' });
     const { error, out } = validateFields(entryFields(request.body), { partial: true });
     if (error) return reply.code(400).send({ error });
@@ -104,14 +114,16 @@ export default async function (app) {
     if (out.amount !== undefined) { sets.push('amount = ?'); params.push(out.amount); }
     if (sets.length > 0) {
       sets.push("updated_at = datetime('now')");
-      params.push(request.params.id);
+      params.push(id);
       db.prepare(`UPDATE entries SET ${sets.join(', ')} WHERE id = ?`).run(...params);
     }
     return { ok: true };
   });
 
   app.delete('/entries/:id', { preHandler: [app.authenticate, app.requireParent] }, async (request, reply) => {
-    const res = db.prepare('DELETE FROM entries WHERE id = ?').run(request.params.id);
+    const id = pathId(request);
+    if (id === null) return reply.code(404).send({ error: '记录不存在' });
+    const res = db.prepare('DELETE FROM entries WHERE id = ?').run(id);
     if (res.changes === 0) return reply.code(404).send({ error: '记录不存在' });
     return { ok: true };
   });

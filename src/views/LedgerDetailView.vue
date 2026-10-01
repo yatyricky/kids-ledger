@@ -6,6 +6,7 @@ import { getFamily, getBadge } from '../../shared/palettes.js';
 import { fmtDate, fmtAmount, fmtBalance } from '../format.js';
 import EntryDialog from '../components/EntryDialog.vue';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
+import LoadingSpinner from '../components/LoadingSpinner.vue';
 
 const props = defineProps({
   id: { type: String, required: true },
@@ -16,6 +17,7 @@ const ledger = ref(null);
 const entries = ref([]);
 const categories = ref([]);
 const loadError = ref('');
+const loading = ref(true);
 
 const showEntryDialog = ref(false);
 const editingEntry = ref(null);
@@ -57,11 +59,14 @@ const badgeVars = (cat) => ({ background: getBadge(cat.color).css });
 
 async function load() {
   loadError.value = '';
+  loading.value = true;
   try {
     ledger.value = await api(`/ledgers/${props.id}`);
     entries.value = await api(`/ledgers/${props.id}/entries`);
   } catch (e) {
     loadError.value = e.message;
+  } finally {
+    loading.value = false;
   }
 }
 
@@ -128,6 +133,7 @@ async function doDeleteEntry() {
       <span v-else class="spacer"></span>
     </header>
 
+    <LoadingSpinner :active="loading" />
     <p v-if="loadError" class="load-error">{{ loadError }}</p>
 
     <div v-if="ledger" class="table-wrap">
