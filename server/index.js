@@ -3,7 +3,7 @@ import fastifyStatic from '@fastify/static';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadConfig, authenticate, requireParent } from './auth.js';
+import { authenticate, requireParent } from './auth.js';
 import authRoutes from './routes/auth.js';
 import ledgerRoutes from './routes/ledgers.js';
 import entryRoutes from './routes/entries.js';
@@ -13,8 +13,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distDir = path.join(__dirname, '..', 'dist');
 
 const app = Fastify({ logger: true });
-
-loadConfig();
 
 app.decorate('authenticate', authenticate);
 app.decorate('requireParent', requireParent);

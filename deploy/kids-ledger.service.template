@@ -2,7 +2,8 @@
 #
 # 占位符（部署前全部替换为实际值）：
 #   {{INSTALL_DIR}}   项目部署目录，例如 /opt/kids-ledger
-#   {{RUN_USER}}      运行用户，例如 www-data（需可读写部署目录，data/ 下写 SQLite）
+#   {{RUN_USER}}      运行用户，例如 www-data（需可读写部署目录，data/ 下写 SQLite；
+#                     若 config.json 的 dbPath 指向部署目录之外，该目录也需 RUN_USER 可写）
 #   {{BACKEND_PORT}}  后端监听端口，默认 3050；必须与 nginx 模板的 {{BACKEND_PORT}} 一致
 #
 # 前置条件：部署目录下 config.json 必须已存在（deploy.ps1 会自动从 example 生成；

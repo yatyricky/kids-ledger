@@ -1,4 +1,5 @@
 {
+  "dbPath": "./data/ledger.db",
   "tokens": [
     { "token": "{{PARENT_TOKEN}}", "role": "parent", "label": "爸爸妈妈" },
     { "token": "{{CHILD_TOKEN}}", "role": "child", "label": "小朋友" }

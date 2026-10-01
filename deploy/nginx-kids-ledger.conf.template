@@ -1,9 +1,9 @@
 # 家庭账本 · 客户端 SPA nginx 配置模板（nginx 直接托管静态文件，/api 反代后端）
 #
 # 占位符（部署前全部替换为实际值）：
-#   {{SERVER_NAME}}          站点域名，例如 kl.nefandfriends.com
-#   {{SSL_CERTIFICATE}}      证书全链路径，例如 /etc/letsencrypt/live/kl.nefandfriends.com/fullchain.pem
-#   {{SSL_CERTIFICATE_KEY}}  证书私钥路径，例如 /etc/letsencrypt/live/kl.nefandfriends.com/privkey.pem
+#   {{SERVER_NAME}}          站点域名，例如 domain.com
+#   {{SSL_CERTIFICATE}}      证书全链路径，例如 /etc/letsencrypt/live/domain.com/fullchain.pem
+#   {{SSL_CERTIFICATE_KEY}}  证书私钥路径，例如 /etc/letsencrypt/live/domain.com/privkey.pem
 #   {{SPA_ROOT}}             前端构建产物目录（dist/），例如 /opt/kids-ledger/dist
 #   {{BACKEND_HOST}}         后端地址，本机部署为 127.0.0.1
 #   {{BACKEND_PORT}}         后端端口（server/index.js 默认 3050，需与 service 模板一致）

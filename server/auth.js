@@ -1,27 +1,7 @@
-import { readFileSync } from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const CONFIG_PATH = path.join(__dirname, '..', 'config.json');
-
-let tokenMap = [];
-
-export function loadConfig() {
-  const cfg = JSON.parse(readFileSync(CONFIG_PATH, 'utf8'));
-  if (!Array.isArray(cfg.tokens) || cfg.tokens.length === 0) {
-    throw new Error('config.json 需要一个非空的 tokens 数组');
-  }
-  for (const t of cfg.tokens) {
-    if (!t.token || !['parent', 'child'].includes(t.role)) {
-      throw new Error(`token 配置无效（需要 token 与 role: parent|child）：${JSON.stringify(t)}`);
-    }
-  }
-  tokenMap = cfg.tokens;
-}
+import { config } from './config.js';
 
 export function findUserByToken(token) {
-  return tokenMap.find((t) => t.token === token) ?? null;
+  return config.tokens.find((t) => t.token === token) ?? null;
 }
 
 // 从 Authorization: Bearer <token> 解析用户，挂到 request.user
